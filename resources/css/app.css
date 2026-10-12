@@ -1,9 +1,284 @@
-@import 'tailwindcss';
 
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+
+:root {
+    /* Latar malam */
+    --bg: #0e1511;
+    --paper: #17231b;
+
+    /* Hijau hutan */
+    --green: #3e694a;
+    --green-dark: #243e2c;
+    --mint: #21382a;
+
+    /* Aksen fantasi */
+    --yellow: #d7c078;
+    --pink: #50323c;
+
+    /* Teks dan garis */
+    --text: #e2eee3;
+    --border: #55775d;
+    --shadow: #080d09;
+}
+
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 30px;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Trebuchet MS", Arial, sans-serif;
+    line-height: 1.7;
+}
+
+/* Judul bergaya game pixel */
+h1, h2, h3 {
+    color: var(--green-dark);
+    line-height: 1.5;
+}
+
+h1 {
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(16px, 2vw, 25px);
+    margin-bottom: 25px;
+}
+
+h2 {
+    font-family: "Press Start 2P", monospace;
+    font-size: 13px;
+    margin-top: 0;
+}
+
+/* Tautan */
+a {
+    color: var(--green-dark);
+    font-weight: bold;
+    text-decoration: none;
+}
+
+a:hover {
+    color: #92734d;
+    text-decoration: underline;
+}
+
+/* Tombol retro */
+button, .btn {
+    padding: 11px 16px;
+    background: var(--green);
+    color: white;
+    border: 2px solid var(--border);
+    border-radius: 0;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 4px 4px 0 var(--shadow);
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+button:hover, .btn:hover {
+    transform: translate(2px, 2px);
+    box-shadow: 2px 2px 0 var(--shadow);
+}
+
+/* Input formulir */
+input, select, textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 11px;
+    border: 2px solid #b6c9ad;
+    border-radius: 0;
+    background: var(--paper);
+    color: var(--text);
+    font: inherit;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--green);
+    outline-offset: 2px;
+}
+
+/* Panel dan kartu */
+.card, .panel, .kotak-motivasi {
+    padding: 22px;
+    margin-bottom: 24px;
+    background: var(--paper);
+    border: 3px solid var(--border);
+    border-radius: 0;
+    box-shadow: 6px 6px 0 var(--shadow);
+}
+
+/* Kotak motivasi */
+.kotak-motivasi {
+    max-width: 680px;
+    background: var(--mint);
+}
+
+#pesan {
+    min-height: 48px;
+    line-height: 1.8;
+}
+
+/* Daftar menu */
+ul {
+    padding-left: 24px;
+}
+
+li {
+    margin-bottom: 12px;
+}
+
+/* Tabel data */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--paper);
+}
+
+th, td {
+    padding: 12px;
+    border: 2px solid #d6dfcd;
+    text-align: left;
+}
+
+th {
+    background: var(--mint);
+    color: var(--green-dark);
+}
+
+/* Pesan sukses dan peringatan */
+.alert-success {
+    padding: 12px;
+    background: var(--mint);
+    border: 2px solid var(--green);
+}
+
+.alert-danger, .alert-error {
+    padding: 12px;
+    background: var(--pink);
+    border: 2px solid #bd7b83;
+}
+
+/* Tampilan HP */
+@media (max-width: 600px) {
+    body {
+        padding: 16px;
+    }
+
+    h2 {
+        font-size: 11px;
+    }
+
+    .card, .panel, .kotak-motivasi {
+        padding: 15px;
+        box-shadow: 4px 4px 0 var(--shadow);
+    }
+
+    table {
+        display: block;
+        overflow-x: auto;
+    }
+}
+
+/* ===== HALAMAN IPK KUMULATIF ===== */
+
+.ipk-page {
+    max-width: 1100px;
+    margin: 0 auto;
+}
+
+.ipk-header {
+    background: var(--mint);
+    border: 3px solid var(--border);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.ipk-table-card {
+    background: var(--paper);
+    border: 3px solid var(--border);
+    padding: 20px;
+    margin: 24px 0;
+    box-shadow: 6px 6px 0 var(--shadow);
+}
+
+.ipk-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    margin: 24px 0;
+}
+
+.ipk-stat {
+    background: var(--paper);
+    border: 3px solid var(--border);
+    padding: 18px;
+    box-shadow: 4px 4px 0 var(--shadow);
+    overflow-wrap: anywhere;
+}
+
+.ipk-stat:nth-child(2) {
+    background: var(--mint);
+}
+
+.ipk-stat:nth-child(3) {
+    background: var(--yellow);
+}
+
+.ipk-stat strong {
+    display: block;
+    margin-bottom: 8px;
+}
+
+.ipk-score {
+    font-family: "Press Start 2P", monospace;
+    font-size: clamp(18px, 3vw, 30px);
+    color: var(--green-dark);
+}
+
+.ipk-back {
+    display: inline-block;
+    margin-top: 18px;
+    padding: 10px 14px;
+    border: 2px solid var(--border);
+    background: var(--paper);
+    box-shadow: 4px 4px 0 var(--shadow);
+}
+
+/* Tampilan dashboard di HP */
+@media (max-width: 650px) {
+    body {
+        padding: 14px 10px;
+    }
+
+    .container {
+        width: 100%;
+    }
+
+    .header,
+    .panel {
+        padding: 15px;
+        margin-bottom: 16px;
+    }
+
+    .menu-grid {
+        grid-template-columns: 1fr;
+    }
+
+    h1 {
+        font-size: 25px;
+    }
+
+    h2 {
+        font-size: 20px;
+    }
+
+    .button {
+        max-width: 100%;
+        white-space: normal;
+    }
 }

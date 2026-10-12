@@ -2,76 +2,68 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\StudentCourse;
+use App\Models\SemesterIpkEntry;
 use Illuminate\Http\Request;
 
 class TargetIpkController extends Controller
 {
-    public function index()
+    private function getAcademicData(): array
     {
-        $studentCourses = StudentCourse::where('user_id', auth()->id())
-            ->whereNotNull('nilai')
-            ->with('course')
+        $entries = SemesterIpkEntry::where('user_id', auth()->id())
             ->get();
 
-        $totalSks = 0;
-        $totalNilai = 0;
+        $totalSks = $entries->sum('total_sks');
 
-        foreach ($studentCourses as $studentCourse) {
-            $sks = $studentCourse->course->sks;
-            $bobot = (float) $studentCourse->bobot;
+        $totalNilai = $entries->sum(function ($entry) {
+            return (float) $entry->ip * $entry->total_sks;
+        });
 
-            $totalSks += $sks;
-            $totalNilai += $sks * $bobot;
-        }
+        $ipk = $totalSks > 0 ? $totalNilai / $totalSks : 0;
 
-        $ipk = $totalSks > 0
-            ? $totalNilai / $totalSks
-            : 0;
+        return [
+            'totalSks' => $totalSks,
+            'totalNilai' => $totalNilai,
+            'ipk' => $ipk,
+        ];
+    }
 
-        return view('target_ipk.index', compact(
-            'totalSks',
-            'totalNilai',
-            'ipk'
-        ));
+    public function index()
+    {
+        $academicData = $this->getAcademicData();
+
+        return view('target_ipk.index', $academicData);
     }
 
     public function calculate(Request $request)
     {
-        $request->validate([
+        $validated = $request->validate([
             'target_ipk' => 'required|numeric|min:0|max:4',
             'sks_mendatang' => 'required|integer|min:1|max:200',
         ]);
 
-        $studentCourses = StudentCourse::where('user_id', auth()->id())
-            ->whereNotNull('nilai')
-            ->with('course')
-            ->get();
+        $academicData = $this->getAcademicData();
 
-        $totalSks = 0;
-        $totalNilai = 0;
+        $totalSks = $academicData['totalSks'];
+        $totalNilai = $academicData['totalNilai'];
+        $ipk = $academicData['ipk'];
 
-        foreach ($studentCourses as $studentCourse) {
-            $sks = $studentCourse->course->sks;
-            $bobot = (float) $studentCourse->bobot;
+        $targetIpk = (float) $validated['target_ipk'];
+        $sksMendatang = (int) $validated['sks_mendatang'];
 
-            $totalSks += $sks;
-            $totalNilai += $sks * $bobot;
-        }
+        $totalSksAkhir = $totalSks + $sksMendatang;
 
-        $ipk = $totalSks > 0
-            ? $totalNilai / $totalSks
+        $nilaiDibutuhkan = ($targetIpk * $totalSksAkhir) - $totalNilai;
+
+        $rataRataDibutuhkan = $nilaiDibutuhkan / $sksMendatang;
+
+        $ipkMaksimal = $totalSksAkhir > 0
+            ? ($totalNilai + (4 * $sksMendatang)) / $totalSksAkhir
             : 0;
 
-        $targetIpk = (float) $request->target_ipk;
-        $sksMendatang = (int) $request->sks_mendatang;
-
-        $nilaiDibutuhkan =
-            ($targetIpk * ($totalSks + $sksMendatang))
-            - $totalNilai;
-
-        $rataRataDibutuhkan =
-            $nilaiDibutuhkan / $sksMendatang;
+        $targetBisaDicapai =
+            $targetIpk <= $ipkMaksimal
+            && $rataRataDibutuhkan <= 4
+            && $rataRataDibutuhkan >= 0;
 
         return view('target_ipk.index', compact(
             'totalSks',
@@ -80,7 +72,9 @@ class TargetIpkController extends Controller
             'targetIpk',
             'sksMendatang',
             'nilaiDibutuhkan',
-            'rataRataDibutuhkan'
+            'rataRataDibutuhkan',
+            'ipkMaksimal',
+            'targetBisaDicapai'
         ));
     }
 }

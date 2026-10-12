@@ -2,129 +2,103 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\StudentCourse;
+use App\Models\SemesterIpkEntry;
 use Illuminate\Http\Request;
 
 class PlannedCourseController extends Controller
 {
-    private function getBobotNilai($nilai): float
+    private function getAcademicData(): array
     {
-        if (is_numeric($nilai)) {
-            return (float) $nilai;
-        }
+        $entries = SemesterIpkEntry::where('user_id', auth()->id())
+            ->get();
 
-        $bobotNilai = [
-            'A' => 4.0,
-            'B' => 3.0,
-            'C' => 2.0,
-            'E' => 0.0,
+        $totalSks = $entries->sum('total_sks');
+
+        $totalNilai = $entries->sum(function ($entry) {
+            return (float) $entry->ip * $entry->total_sks;
+        });
+
+        $ipk = $totalSks > 0
+            ? $totalNilai / $totalSks
+            : 0;
+
+        return [
+            'totalSks' => $totalSks,
+            'totalNilai' => $totalNilai,
+            'ipk' => $ipk,
         ];
-
-        return (float) ($bobotNilai[strtoupper((string) $nilai)] ?? 0.0);
-    }
-
-    private function getTotalSksDanNilai($studentCourses): array
-    {
-        $totalSks = 0;
-        $totalNilai = 0;
-
-        foreach ($studentCourses as $item) {
-            if (!$item->course) {
-                continue;
-            }
-
-            $sks = (int) $item->course->sks;
-            $bobot = $this->getBobotNilai($item->bobot ?? $item->nilai);
-
-            $totalSks += $sks;
-            $totalNilai += $sks * $bobot;
-        }
-
-        return [$totalSks, $totalNilai];
     }
 
     public function index()
     {
-        $studentCourses = StudentCourse::where('user_id', auth()->id())
-            ->whereNotNull('nilai')
-            ->with('course')
-            ->get();
-
-        [$totalSks, $totalNilai] = $this->getTotalSksDanNilai($studentCourses);
-
-        $ipk = $totalSks > 0 ? $totalNilai / $totalSks : 0;
-
-        return view('planned_courses.index', compact(
-            'totalSks',
-            'totalNilai',
-            'ipk'
-        ));
+        return view(
+            'planned_courses.index',
+            $this->getAcademicData()
+        );
     }
 
     public function calculate(Request $request)
     {
         $data = $request->validate([
-            'nama_mata_kuliah' => 'required|array|min:1',
-            'nama_mata_kuliah.*' => 'required|string|max:255',
-            'sks' => 'required|array',
-            'sks.*' => 'required|integer|min:1|max:6',
-            'nilai' => 'required|array',
-            'nilai.*' => 'required|in:A,B,C,E',
+            'target_ipk' => 'required|numeric|min:0|max:4',
+            'sks_rencana' => 'required|integer|min:1|max:200',
+            'ip_rencana' => 'required|numeric|min:0|max:4',
         ]);
 
-        $studentCourses = StudentCourse::where('user_id', auth()->id())
-            ->whereNotNull('nilai')
-            ->with('course')
-            ->get();
+        $academicData = $this->getAcademicData();
 
-        [$totalSks, $totalNilai] = $this->getTotalSksDanNilai($studentCourses);
+        $totalSks = $academicData['totalSks'];
+        $totalNilai = $academicData['totalNilai'];
+        $ipk = $academicData['ipk'];
 
-        $bobotNilai = [
-            'A' => 4.0,
-            'B' => 3.0,
-            'C' => 2.0,
-            'E' => 0.0,
-        ];
+        $targetIpk = (float) $data['target_ipk'];
+        $sksRencana = (int) $data['sks_rencana'];
+        $ipRencana = (float) $data['ip_rencana'];
 
-        $rencana = [];
-        $sksRencana = 0;
-        $nilaiRencana = 0;
-
-        foreach ($data['nama_mata_kuliah'] as $i => $nama) {
-            $sks = (int) $data['sks'][$i];
-            $nilai = $data['nilai'][$i];
-            $bobot = $bobotNilai[$nilai];
-
-            $sksRencana += $sks;
-            $nilaiRencana += $sks * $bobot;
-
-            $rencana[] = [
-                'nama' => $nama,
-                'sks' => $sks,
-                'nilai' => $nilai,
-                'bobot' => $bobot,
-            ];
-        }
+        $nilaiRencana = $sksRencana * $ipRencana;
 
         $totalSksSimulasi = $totalSks + $sksRencana;
         $totalNilaiSimulasi = $totalNilai + $nilaiRencana;
-
-        $ipk = $totalSks > 0 ? $totalNilai / $totalSks : 0;
 
         $ipkSimulasi = $totalSksSimulasi > 0
             ? $totalNilaiSimulasi / $totalSksSimulasi
             : 0;
 
+        $selisihIpk = $ipkSimulasi - $ipk;
+
+        if ($selisihIpk > 0.000001) {
+            $analisisIpk = 'naik';
+        } elseif ($selisihIpk < -0.000001) {
+            $analisisIpk = 'turun';
+        } else {
+            $analisisIpk = 'tetap';
+        }
+
+        $selisihTarget = $ipkSimulasi - $targetIpk;
+
+        if ($selisihTarget > 0.000001) {
+            $statusTarget = 'tercapai';
+        } elseif ($selisihTarget < -0.000001) {
+            $statusTarget = 'belum';
+        } else {
+            $statusTarget = 'pas';
+        }
+
         return view('planned_courses.index', compact(
             'totalSks',
             'totalNilai',
             'ipk',
-            'rencana',
+            'targetIpk',
             'sksRencana',
+            'ipRencana',
             'nilaiRencana',
             'totalSksSimulasi',
             'totalNilaiSimulasi',
-            'ipkSimulasi'
+            'ipkSimulasi',
+            'selisihIpk',
+            'analisisIpk',
+            'selisihTarget',
+            'statusTarget'
         ));
     }
 }
